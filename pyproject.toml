@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "imageswapper"
-version = "0.1.0"
+version = "1.0.0"
 description = "Small script to swap images with a folder of images, matching the size of the ones it's replacing"
 authors = ["James <plyrthn@users.noreply.github.com>"]
 license = "MIT"
