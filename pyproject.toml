@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "imageswapper"
+version = "0.1.0"
+description = "Small script to swap images with a folder of images, matching the size of the ones it's replacing"
+authors = ["James <plyrthn@users.noreply.github.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+Pillow = "^9.2.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+imageSwapper = 'imageSwapper.main:main'
