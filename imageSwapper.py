@@ -1,65 +1,89 @@
-import random
-from argparse import ArgumentParser
-from os import path, listdir, makedirs
+import os
+import subprocess
 
+import numpy as np
 from PIL import Image
 
 
-def get_bool(prompt):
-    while True:
+def get_files(directory, extensions):
+    """
+    Retrieve files with specific extensions from a directory.
+    """
+    files_list = []
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file.split('.')[-1].lower() in extensions:
+                files_list.append(os.path.join(root, file))
+    return files_list
+
+
+def match_template(input_image_path, template_files):
+    """
+    Select a random template and return its path and properties using ImageMagick.
+    """
+    while template_files:  # Keep trying until a compatible file is found or the list is exhausted
+        template_path = np.random.choice(template_files, replace=False)
         try:
-            return {"true": True, "false": False}[input(prompt).lower()]
-        except KeyError:
-            print("Invalid input please enter True or False!")
+            # Use ImageMagick's identify command to get image size
+            result = subprocess.run(['magick', 'identify', '-format', '%wx%h', template_path],
+                                    capture_output=True, text=True, check=True)
+            size_str = result.stdout.strip()
+            width, height = map(int, size_str.split('x'))
+            template_info = {'path': template_path, 'size': (width, height), 'format': 'DDS'}
+            template_files.remove(template_path)  # Remove selected template to avoid repetition
+            return template_info
+        except subprocess.CalledProcessError as e:
+            print(f"Skipping unsupported template {template_path}: {e}")
+            template_files.remove(template_path)  # Remove unsupported template from consideration
+
+    return None  # Return None if no compatible template is found
 
 
-def get_list_of_files(dir_name):
-    list_of_file = listdir(dir_name)
-    all_files = list()
-    for entry in list_of_file:
-        full_path = path.join(dir_name, entry)
-        if path.isdir(full_path):
-            all_files = all_files + get_list_of_files(full_path)
-        else:
-            all_files.append(full_path)
-    return all_files
+def process_images(input_folder, template_folder, output_folder):
+    extensions = ['jpg', 'jpeg', 'png', 'webp', 'bmp']
+    input_files = get_files(input_folder, extensions)
+    template_files = get_files(template_folder, ['dds'])  # Assuming DDS is the desired format
+
+    # Ensure the list of templates is reused once all have been selected
+    original_template_files = template_files.copy()
+
+    for input_file in input_files:
+        if not template_files:  # Replenish the list if empty
+            template_files = original_template_files.copy()
+
+        template_info = match_template(input_file, template_files)
+        if template_info is None:
+            print(f"No compatible template found for {input_file}. Skipping.")
+            continue  # Skip to the next input file if no compatible template was found
+
+        # Construct output path
+        relative_path = os.path.relpath(template_info['path'], template_folder)
+        output_path = os.path.join(output_folder, relative_path)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        # Update the output path's extension to .dds
+        output_path_dds = output_path.rsplit('.', 1)[0] + '.dds'
+
+        # Use ImageMagick to resize and convert the input image to match the template, ignoring aspect ratio
+        try:
+            subprocess.run([
+                'magick', 'convert', input_file,
+                '-resize', f"{template_info['size'][0]}x{template_info['size'][1]}!",
+                output_path_dds
+            ], check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error processing {input_file}: {e}")
+            continue
+
+    print("Processing complete.")
 
 
-def get_file_info(input_images: str, swap_folder: str, output_dir: bool):
-    input_files = get_list_of_files(input_images)
-    swap_files = get_list_of_files(swap_folder)
-    base_files = {}
-    for file in input_files:
-        image = Image.open(file)
-        base_files[file] = image.size
-    if len(base_files.keys()) > len(swap_files):
-        if get_bool(
-                f"You have more source images ({len(base_files.keys())}) than you have swap images({len(swap_files)}).\nShould we loop? True or False.\n>"):
-            randomized_list = random.choices(swap_files, k=len(base_files.keys()))
-        else:
-            exit()
+
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) != 4:
+        print("Usage: python script.py <input_folder> <template_folder> <output_folder>")
     else:
-        randomized_list = random.sample(swap_files, len(input_images))
-    iter_num = 0
-    for key, value in base_files.items():
-        print(f"{key} was replaced with: {randomized_list[iter_num]}")
-        image = Image.open(randomized_list[iter_num])
-        image = image.convert('RGB')
-        image = image.resize(value)
-        if output_dir:
-            if not path.isdir(f'{output_dir}/{key.replace(input_images, "").replace(path.basename(key), "")}'):
-                makedirs(f'{output_dir}/{key.replace(input_images, "").replace(path.basename(key), "")}')
-            image.save(f'{output_dir}/{key.replace(input_images, "")}')
-        else:
-            image.save(key, 'JPEG')
-        iter_num += 1
-
-
-if __name__ == '__main__':
-    parser = ArgumentParser()
-    parser.add_argument('-i', '--input_images', type=str, help="Images you are hoping to replace.")
-    parser.add_argument('-s', '--swap_folder', type=str,
-                        help="Your folder of images you want to use to swap with the ones in input.")
-    parser.add_argument('-o', '--output_dir', default=None, type=str, help="Output directory, optional.")
-    args = parser.parse_args()
-    get_file_info(swap_folder=args.swap_folder, input_images=args.input_images, output_dir=args.output_dir)
+        input_folder, template_folder, output_folder = sys.argv[1:]
+        process_images(input_folder, template_folder, output_folder)
