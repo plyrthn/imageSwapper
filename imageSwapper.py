@@ -17,21 +17,29 @@ def get_files(directory, extensions):
     return files_list
 
 
-def match_template(input_image_path, template_files):
+def match_template(input_image_path, template_files, do_not_duplicate):
     """
     Select a random template and return its path and properties using ImageMagick.
     """
     while template_files:  # Keep trying until a compatible file is found or the list is exhausted
         template_path = np.random.choice(template_files, replace=False)
         try:
-            # Use ImageMagick's identify command to get image size
+            # Use ImageMagick's identify to get image size
             result = subprocess.run(['magick', 'identify', '-format', '%wx%h', template_path],
                                     capture_output=True, text=True, check=True)
             size_str = result.stdout.strip()
-            width, height = map(int, size_str.split('x'))
-            template_info = {'path': template_path, 'size': (width, height), 'format': 'DDS'}
-            template_files.remove(template_path)  # Remove selected template to avoid repetition
-            return template_info
+
+            # Ensure there's only one 'x' in size_str and it can be split into exactly two values
+            if size_str.count('x') == 1:
+                width, height = map(int, size_str.split('x'))
+                template_info = {'path': template_path, 'size': (width, height), 'format': 'DDS'}
+                if not do_not_duplicate:
+                    template_files.remove(template_path)
+                return template_info
+            else:
+                # Handle unexpected format
+                print(f"Unexpected size format for template {template_path}: {size_str}")
+                template_files.remove(template_path)  # Remove this template from consideration
         except subprocess.CalledProcessError as e:
             print(f"Skipping unsupported template {template_path}: {e}")
             template_files.remove(template_path)  # Remove unsupported template from consideration
@@ -51,7 +59,7 @@ def process_images(input_folder, template_folder, output_folder):
         if not template_files:  # Replenish the list if empty
             template_files = original_template_files.copy()
 
-        template_info = match_template(input_file, template_files)
+        template_info = match_template(input_file, template_files, do_not_duplicate)
         if template_info is None:
             print(f"No compatible template found for {input_file}. Skipping.")
             continue  # Skip to the next input file if no compatible template was found
@@ -82,8 +90,11 @@ def process_images(input_folder, template_folder, output_folder):
 if __name__ == "__main__":
     import sys
 
-    if len(sys.argv) != 4:
-        print("Usage: python script.py <input_folder> <template_folder> <output_folder>")
-    else:
-        input_folder, template_folder, output_folder = sys.argv[1:]
-        process_images(input_folder, template_folder, output_folder)
+    if not (4 <= len(sys.argv) <= 5):
+        print("Usage: python script.py <input_folder> <template_folder> <output_folder> [do_not_duplicate]")
+        sys.exit(1)
+
+    input_folder, template_folder, output_folder = sys.argv[1:4]
+    do_not_duplicate = len(sys.argv) == 5 and sys.argv[4].lower() in ['true', 'yes', '1']
+
+    process_images(input_folder, template_folder, output_folder, do_not_duplicate)
