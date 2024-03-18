@@ -47,7 +47,7 @@ def match_template(input_image_path, template_files, do_not_duplicate):
     return None  # Return None if no compatible template is found
 
 
-def process_images(input_folder, template_folder, output_folder):
+def process_images(input_folder, template_folder, output_folder, do_not_duplicate=False):
     extensions = ['jpg', 'jpeg', 'png', 'webp', 'bmp']
     input_files = get_files(input_folder, extensions)
     template_files = get_files(template_folder, ['dds'])  # Assuming DDS is the desired format
