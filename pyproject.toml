@@ -10,6 +10,7 @@ readme = "README.md"
 python = "^3.9"
 pillow = "^10.2.0"
 numpy = "^1.26.4"
+pre-commit = "^4.0.1"
 
 
 [build-system]
