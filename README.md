@@ -1,62 +1,109 @@
+
 # Image Swapper
 
 ## Introduction
-Image Swapper is a Python script that automates the process of swapping images from an input directory with templates from a template directory, processing them accordingly, and outputting the results to a specified directory. It leverages ImageMagick for complex image processing tasks, including resizing and converting image formats.
+Image Swapper is a Python script that resizes and converts images from an input directory using templates from a template directory. The processed images are saved to an output directory. This tool is useful for batch processing large numbers of images, ensuring they match specific templates in size and format. It uses ImageMagick for the heavy lifting of image processing and logs all actions for easy troubleshooting.
 
-## Requirements
-- Python 3.6 or higher
-- Poetry for dependency management
-- ImageMagick installed and accessible from the command line
+## Features
+- **Batch Image Processing**: Automatically processes multiple images at once.
+- **Template Matching**: Uses images from the template directory to determine the output size and format.
+- **Format Support**: Works with common image formats like JPG, PNG, BMP, WEBP, and DDS.
+- **Parallel Execution**: Uses multiple processes to speed up processing.
+- **Error Logging**: Logs detailed information about successes, errors, and unexpected events to `imageSwapper.log`.
+
+## Prerequisites
+- **Python 3.6 or higher**
+- **ImageMagick**: Ensure that ImageMagick is installed and the `magick` command is available in your system's PATH. Visit [ImageMagick's official website](https://imagemagick.org) for installation instructions.
 
 ## Installation
 
-### Install ImageMagick
-Ensure ImageMagick is installed on your system and that the `magick` command is accessible from the command line. Visit [ImageMagick's official website](https://imagemagick.org) for installation instructions.
+1. **Install ImageMagick**
+   - Download and install ImageMagick from [imagemagick.org](https://imagemagick.org/).
+   - Make sure the `magick` command works in your terminal.
 
-### Setup with Poetry
-After cloning the project, navigate to the project directory and run the following command to install Python dependencies via Poetry:
+2. **Clone the repository**
+   ```bash
+   git clone https://github.com/username/image-swapper.git
+   cd image-swapper
+   ```
 
-```bash
-poetry install
-```
-
-This command sets up a virtual environment and installs the necessary dependencies defined in `pyproject.toml`.
+3. **Install dependencies** (optional)
+   - If you use **Poetry**:
+     ```bash
+     poetry install
+     ```
+   - Otherwise, manually install Python packages:
+     ```bash
+     pip install -r requirements.txt
+     ```
 
 ## Usage
-To use the script, you can run it through Poetry to ensure it executes in the correct virtual environment. Use the following command format:
 
+Run the following command to start swapping images:
 ```bash
-poetry run python imageSwapper.py <input_folder> <template_folder> <output_folder> [--do_not_duplicate]
+python imageSwapper.py <input_folder> <template_folder> <output_folder> [--do_not_duplicate]
 ```
 
-### Arguments
-- `<input_folder>`: Directory containing the images to process. For example, a folder containing memes or other images you want resized.
-- `<template_folder>`: Directory containing the template images. These are the images to match for size and output format.
-- `<output_folder>`: Directory where processed images will be saved.
-- `--do_not_duplicate` (optional): Flag to prevent template reuse across multiple images. If omitted, templates may be reused.
+### Required Arguments
+- **input_folder**: Path to the folder containing images to be processed.
+- **template_folder**: Path to the folder containing template images.
+- **output_folder**: Path to the folder where processed images will be saved.
+
+### Optional Arguments
+- **--do_not_duplicate**: If set, each template will only be used once. Without this flag, templates may be reused for multiple input images.
 
 ### Example Command
 ```bash
-poetry run python imageSwapper.py "M:/Pictures/memes" "C:/Users/James/AppData/Local/FortniteGame/Saved/PersistentDownloadDir/CMS/Files/C28FF1DE0C661DAF01E118A30B3F21B897A7A6E2bak" "C:/Users/James/AppData/Local/FortniteGame/Saved/PersistentDownloadDir/CMS/Files/C28FF1DE0C661DAF01E118A30B3F21B897A7A6E2" --do_not_duplicate
+python imageSwapper.py "./input_images" "./templates" "./output_images" --do_not_duplicate
 ```
+**Explanation:**
+- Images from `./input_images` are processed to match templates from `./templates`.
+- The processed images are saved in `./output_images`.
+- The `--do_not_duplicate` flag ensures that each template is only used once.
 
-This processes images from `"M:/Pictures/memes"`, matches them with templates from `"C:/Users/James/AppData/Local/FortniteGame/Saved/PersistentDownloadDir/CMS/Files/C28FF1DE0C661DAF01E118A30B3F21B897A7A6E2bak"`, and outputs processed images to `"C:/Users/James/AppData/Local/FortniteGame/Saved/PersistentDownloadDir/CMS/Files/C28FF1DE0C661DAF01E118A30B3F21B897A7A6E2"`. The `--do_not_duplicate` flag ensures templates are used only once.
+## How It Works
+1. **Input and Template Collection**: The script scans the input and template directories to collect supported image files.
+2. **Template Matching**: Randomly selects a template image and determines its dimensions.
+3. **Image Processing**: Uses ImageMagick to resize the input image to match the template size and saves it to the output directory.
+4. **Parallel Execution**: Multiple images are processed concurrently for faster execution.
 
-## Features
-1. **Input File Handling**: Accepts various image formats like JPG, PNG, WEBP, and BMP from the input directory.
-2. **Template Matching**: Uses DDS template files to determine the output image size and format.
-3. **Flexible Processing**: Optionally prevents duplication of templates using the `--do_not_duplicate` flag.
-4. **Parallel Processing**: Leverages multi-threading to speed up the resizing and conversion of images.
-5. **Detailed Logging**: Logs operations and errors to `imageSwapper.log` for debugging purposes.
+## Detailed Example
+Assume the following directory structure:
+```
+project/
+├── input_images/
+│     └── image1.jpg
+│     └── image2.png
+├── templates/
+│     └── template1.jpg
+│     └── template2.png
+├── output_images/  (This folder is created automatically)
+```
+Run the following command:
+```bash
+python imageSwapper.py ./input_images ./templates ./output_images --do_not_duplicate
+```
+After execution, `output_images` will contain the resized versions of `image1.jpg` and `image2.png` matching the sizes of `template1.jpg` and `template2.png`.
 
 ## Troubleshooting
-### Common Issues
-1. **ImageMagick Not Found**: Ensure that ImageMagick is installed and the `magick` command is in your system's PATH.
-2. **Invalid Directories**: Verify that the paths for `input_folder`, `template_folder`, and `output_folder` are correct.
-3. **Permission Errors**: Ensure that you have read and write permissions for the specified directories.
 
-### Debugging Logs
-Check the `imageSwapper.log` file in the script's directory for detailed logs of the script's execution.
+**Problem:** ImageMagick `magick` command not found
+- **Solution**: Ensure ImageMagick is installed and added to your system's PATH.
+
+**Problem:** Input or template directory not found
+- **Solution**: Double-check the paths provided in the command. Ensure they exist and are accessible.
+
+**Problem:** No images are processed
+- **Solution**: Make sure there are images in the input and template directories. Supported formats are JPG, PNG, BMP, WEBP, and DDS.
+
+**Problem:** Logs indicate 'Error processing template'
+- **Solution**: Verify that the template images are valid images and that ImageMagick can process them. Check the `imageSwapper.log` file for more details.
+
+## Log File
+All events, errors, and debugging information are saved in `imageSwapper.log`. This file is created in the same directory where the script runs.
 
 ## Support
-For questions or issues, please open an issue on the project's GitHub repository page.
+If you encounter issues, review the `imageSwapper.log` file. It contains detailed information about the script's execution. For further help, open an issue on the project's GitHub repository.
+
+## License
+This project is licensed under the MIT License.
