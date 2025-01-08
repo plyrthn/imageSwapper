@@ -2,6 +2,7 @@ import argparse
 import itertools
 import logging
 import os
+import platform
 import subprocess
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -47,15 +48,34 @@ def match_template(template_files):
     """Select and validate a random template file."""
     template_path = np.random.choice(template_files)
     try:
+        # Determine the command prefix based on the operating system
+        if platform.system() == "Linux":
+            command = [
+                "identify",  # On Linux, use "identify"
+                "-format",
+                "%wx%h",
+                template_path,
+            ]
+        else:
+            command = [
+                "magick",  # On Windows or other OS, use "magick identify"
+                "identify",
+                "-format",
+                "%wx%h",
+                template_path,
+            ]
+
         result = subprocess.run(
-            ["magick", "identify", "-format", "%wx%h", template_path],
+            command,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             text=True,
             check=True,
         )
+
         size_str = result.stdout.strip()
         clean_size_str = "".join(filter(str.isprintable, size_str))
+
         if clean_size_str.count("x") == 1:
             width, height = map(int, clean_size_str.split("x"))
             logging.debug(
@@ -131,15 +151,27 @@ def process_images(
 def resize_and_convert_image(input_file, output_path, size):
     """Resize and convert an image to the appropriate format using ImageMagick."""
     try:
-        subprocess.run(
-            [
+        # Determine the command prefix based on the operating system
+        if platform.system() == "Linux":
+            command = [
+                "convert",
+                input_file,
+                "-resize",
+                f"{size[0]}x{size[1]}!",
+                output_path,
+            ]
+        else:
+            command = [
                 "magick",
                 "convert",
                 input_file,
                 "-resize",
                 f"{size[0]}x{size[1]}!",
                 output_path,
-            ],
+            ]
+
+        subprocess.run(
+            command,
             check=True,
             stderr=subprocess.DEVNULL,
         )
